@@ -1,13 +1,3 @@
-/*
-
-Most part of this code is written by LiLaBoC, and M.Tsuru (AIST, Japan) modified it for visualization.
-protected by MIT License.
-For commercial use, I hope you contact us, to know who/how-to use this code in our human-robot society,
-and to help you with giving much more technical advices.
-
-*/
-
-
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
