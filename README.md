@@ -18,3 +18,6 @@ and then,
 ```$ rosrun pcl_clustering pcl_clustering_node```
 
 can visualize colored PointCloud in RViz.
+
+
+![screenshot](https://github.com/TsuruMasato/pcl_clustering/blob/master/picture/Screenshot%20from%202022-04-19%2018-08-08.png)
