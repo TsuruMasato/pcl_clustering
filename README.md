@@ -15,7 +15,7 @@ This repository has several program samples for integration between PCL and ROS.
 
 and then, 
 
-```$ rosrun pcl_clustering pcl_clustering_node```
+```$ rosrun pcl_clustering euclidean_clustering_flexible_tolerance ```
 
 can visualize colored PointCloud in RViz.
 
