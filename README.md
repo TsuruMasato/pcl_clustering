@@ -1,5 +1,11 @@
 # pcl_clustering
 
+The original author is LiLaBoC, and M.Tsuru has improved a bit.
+
+https://lilaboc.work/archives/20178032.html
+
+
+
 This repository has several program samples for integration between PCL and ROS.
 
 
