@@ -136,6 +136,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(euclidean_clustering_flexible_tolerance src/euclidean_clustering_flexible_tolerance.cpp)
+add_executable(concave_hull_detector src/concave_hull_detector.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -149,6 +150,9 @@ add_executable(euclidean_clustering_flexible_tolerance src/euclidean_clustering_
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(euclidean_clustering_flexible_tolerance
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(concave_hull_detector
   ${catkin_LIBRARIES}
 )
 
