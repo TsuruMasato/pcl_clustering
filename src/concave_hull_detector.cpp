@@ -18,6 +18,8 @@ and to help you with giving much more technical advices.
 // #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/surface/concave_hull.h>
+#include <visualization_msgs/Marker.h>
 
 class Concave_Hull_Detector
 {
@@ -29,6 +31,7 @@ private:
   ros::Subscriber sub_pc;
   /*publishe*/
   ros::Publisher pub_pc;
+  ros::Publisher pub_bbx;
   sensor_msgs::PointCloud2 latest_msg_;
   /*pcl objects*/
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud{new pcl::PointCloud<pcl::PointXYZ>};
@@ -47,10 +50,12 @@ public:
   void Sampling();
   bool remove_plane(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, const Eigen::Vector3f &axis = Eigen::Vector3f(0.0, 0.0, 1.0), double plane_thickness = 0.01);
   void Clustering(void);
+  void GenConvexHull();
   double ComputeTolerance(const pcl::PointXYZ &point);
   bool CustomCondition(const pcl::PointXYZ &seed_point, const pcl::PointXYZ &candidate_point, float squared_distance);
   void Visualization(void);
   void Publish();
+  void Publish_BBX();
 };
 
 Concave_Hull_Detector::Concave_Hull_Detector()
@@ -58,6 +63,7 @@ Concave_Hull_Detector::Concave_Hull_Detector()
 {
   sub_pc = nh.subscribe("/camera/depth/color/points", 1, &Concave_Hull_Detector::CallbackPC, this);
   pub_pc = nh.advertise<sensor_msgs::PointCloud2>("/clustered_pc", 1);
+  pub_bbx = nh.advertise<visualization_msgs::Marker>("/bounding_box", 1);
   // viewer.setBackgroundColor(1, 1, 1);
   // viewer.addCoordinateSystem(1.0, "axis");
   // viewer.setCameraPosition(0.0, 0.0, 35.0, 0.0, 0.0, 0.0);
@@ -88,8 +94,10 @@ void Concave_Hull_Detector::CallbackPC(const sensor_msgs::PointCloud2ConstPtr &m
   Sampling();
   remove_plane(cloud);
   Clustering();
+  GenConvexHull();
   // Visualization(); // Let's visualize on RViz
   Publish();
+  Publish_BBX();
 }
 
 void Concave_Hull_Detector::Sampling(void)
@@ -217,6 +225,21 @@ void Concave_Hull_Detector::Clustering(void)
   std::cout << "clustering time [s] = " << ros::Time::now().toSec() - time_start << std::endl;
 }
 
+void Concave_Hull_Detector::GenConvexHull()
+{
+  for(size_t i=0; i < clusters.size(); i++)
+  {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::ConcaveHull<pcl::PointXYZ> chull;
+    chull.setInputCloud (clusters.at(i));
+    chull.setAlpha (0.1);
+    chull.reconstruct (*cloud_hull);
+
+    std::cerr << "Concave hull" << i << " has: " << cloud_hull->size ()
+            << " data points." << std::endl;
+  }
+}
+
 double Concave_Hull_Detector::ComputeTolerance(const pcl::PointXYZ &point)
 {
   /*センサからの距離（depth）*/
@@ -312,6 +335,35 @@ void Concave_Hull_Detector::Publish()
   result_msg.header = latest_msg_.header;
 
   pub_pc.publish(result_msg);
+}
+
+void Concave_Hull_Detector::Publish_BBX()
+{
+  visualization_msgs::Marker marker;
+  marker.header = latest_msg_.header;
+  marker.header.stamp = ros::Time::now();
+  marker.ns = "basic_shapes";
+  marker.id = 0;
+
+  marker.type = visualization_msgs::Marker::CUBE;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.lifetime = ros::Duration();
+
+  marker.scale.x = 1.0;
+  marker.scale.y = 1.0;
+  marker.scale.z = 1.0;
+  marker.pose.position.x = 0;
+  marker.pose.position.y = 0;
+  marker.pose.position.z = 0;
+  marker.pose.orientation.x = 0;
+  marker.pose.orientation.y = 0;
+  marker.pose.orientation.z = 0;
+  marker.pose.orientation.w = 1;
+  marker.color.r = 0.0f;
+  marker.color.g = 1.0f;
+  marker.color.b = 0.0f;
+  marker.color.a = 0.5f;
+  pub_bbx.publish(marker);
 }
 
 int main(int argc, char **argv)
