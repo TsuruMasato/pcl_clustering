@@ -17,6 +17,7 @@ and to help you with giving much more technical advices.
 #include <pcl/filters/extract_indices.h>
 // #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/segmentation/sac_segmentation.h>
 
 class Concave_Hull_Detector
 {
@@ -44,6 +45,7 @@ public:
   Concave_Hull_Detector();
   void CallbackPC(const sensor_msgs::PointCloud2ConstPtr &msg);
   void Sampling();
+  bool remove_plane(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, const Eigen::Vector3f &axis = Eigen::Vector3f(0.0, 0.0, 1.0), double plane_thickness = 0.01);
   void Clustering(void);
   double ComputeTolerance(const pcl::PointXYZ &point);
   bool CustomCondition(const pcl::PointXYZ &seed_point, const pcl::PointXYZ &candidate_point, float squared_distance);
@@ -84,6 +86,7 @@ void Concave_Hull_Detector::CallbackPC(const sensor_msgs::PointCloud2ConstPtr &m
   clusters.clear();
 
   Sampling();
+  remove_plane(cloud);
   Clustering();
   // Visualization(); // Let's visualize on RViz
   Publish();
@@ -96,6 +99,41 @@ void Concave_Hull_Detector::Sampling(void)
   // set the size of the voxel grid 1x1x1cm
   filter.setLeafSize(0.01f, 0.01f, 0.01f);
   filter.filter(*cloud);
+}
+
+bool Concave_Hull_Detector::remove_plane(const pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, const Eigen::Vector3f &axis, double plane_thickness)
+{
+  pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+  // Create the segmentation object
+  pcl::SACSegmentation<pcl::PointXYZ> seg;
+
+  // Optional
+  seg.setOptimizeCoefficients(true);
+  // Mandatory
+  seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+  seg.setMethodType(pcl::SAC_RANSAC);
+  seg.setMaxIterations(500);
+  seg.setAxis(axis);
+  seg.setEpsAngle(0.25);
+  seg.setDistanceThreshold(plane_thickness); //0.025 0.018
+  seg.setInputCloud(input_cloud);
+  seg.segment(*inliers, *coefficients);
+  //ROS_INFO("plane size : %d", inliers->indices.size());
+
+  if (inliers->indices.size() < 500)
+  {
+    ROS_INFO("plane size is not enough large to remove.");
+    return false;
+  }
+  ROS_INFO("found a plane.");
+  pcl::ExtractIndices<pcl::PointXYZ> extract;
+  extract.setInputCloud(input_cloud);
+  extract.setIndices(inliers);
+  extract.setNegative(true);
+  extract.filter(*input_cloud);
+
+  return true;
 }
 
 void Concave_Hull_Detector::Clustering(void)
